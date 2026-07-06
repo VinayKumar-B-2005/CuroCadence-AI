@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CuroCadence AI — Medication Concierge</title>
+  <meta name="description" content="CuroCadence AI: Your personal AI-powered medication concierge. Track doses, check interactions, and stay safe.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #0B1120;
+      --bg2:      #0f1a2e;
+      --bg3:      #131d32;
+      --cyan:     #22D3EE;
+      --violet:   #A78BFA;
+      --amber:    #F59E0B;
+      --red:      #EF4444;
+      --green:    #22c55e;
+      --text:     #e2e8f0;
+      --text-dim: #94a3b8;
+      --border:   rgba(34,211,238,0.18);
+      --glow-c:   rgba(34,211,238,0.15);
+      --glow-v:   rgba(167,139,250,0.15);
+      --radius:   14px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); }
+
+    /* Layout */
+    .app { display: grid; grid-template-rows: 64px 1fr; height: 100vh; }
+
+    /* Header */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px;
+      background: rgba(11,17,32,0.95);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon { font-size: 28px; }
+    .logo-text { font-size: 18px; font-weight: 800; background: linear-gradient(135deg, var(--cyan), var(--violet)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .logo-sub { font-size: 11px; color: var(--text-dim); }
+
+    nav { display: flex; gap: 6px; }
+    .nav-btn {
+      padding: 8px 16px; border-radius: 8px; border: 1px solid transparent;
+      background: transparent; color: var(--text-dim); cursor: pointer;
+      font-size: 13px; font-weight: 500; font-family: inherit;
+      transition: all 0.2s;
+    }
+    .nav-btn:hover { background: rgba(34,211,238,0.08); color: var(--text); border-color: var(--border); }
+    .nav-btn.active { background: rgba(34,211,238,0.12); color: var(--cyan); border-color: rgba(34,211,238,0.3); }
+
+    .emergency-btn {
+      padding: 8px 18px; border-radius: 8px; border: 1px solid var(--red);
+      background: rgba(239,68,68,0.15);
+      color: white; cursor: pointer; font-size: 13px; font-weight: 700; font-family: inherit;
+      transition: all 0.2s; box-shadow: 0 0 16px rgba(239,68,68,0.3);
+      animation: pulse-red 2s ease-in-out infinite;
+    }
+    .emergency-btn:hover { transform: scale(1.05); box-shadow: 0 0 24px rgba(239,68,68,0.5); }
+    @keyframes pulse-red { 0%,100%{box-shadow:0 0 16px rgba(239,68,68,0.3)} 50%{box-shadow:0 0 28px rgba(239,68,68,0.5)} }
+
+    /* Main Content */
+    main { overflow: hidden; position: relative; }
+    .view { display: none; width: 100%; height: 100%; overflow-y: auto; padding: 24px; flex-direction: column; gap: 20px; }
+    .view.active { display: flex; }
+
+    /* Chat view uses grid for sticky input bar */
+    #view-chat.active { display: grid !important; grid-template-rows: 1fr auto; padding: 0; }
+
+    /* Glass Cards */
+    .card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 0 24px var(--glow-c), inset 0 1px 0 rgba(255,255,255,0.06);
+      padding: 20px;
+    }
+    .card.violet { border-color: rgba(167,139,250,0.25); box-shadow: 0 0 24px var(--glow-v), inset 0 1px 0 rgba(255,255,255,0.06); }
+    .card.amber  { border-color: rgba(245,158,11,0.35); box-shadow: 0 0 20px rgba(245,158,11,0.15); }
+    .card.red    { border-color: rgba(239,68,68,0.35); box-shadow: 0 0 20px rgba(239,68,68,0.15); }
+    .card.green  { border-color: rgba(34,197,94,0.35); box-shadow: 0 0 20px rgba(34,197,94,0.15); }
+    .card-title { font-size: 13px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; }
+
+    /* Chat View */
+    .chat-messages { overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+    .msg { display: flex; gap: 12px; align-items: flex-start; animation: fadeSlide 0.3s ease; }
+    @keyframes fadeSlide { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }
+    .msg-avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+    .msg-avatar.user { background: linear-gradient(135deg, var(--violet), #7c3aed); }
+    .msg-avatar.agent { background: linear-gradient(135deg, var(--cyan), #0891b2); }
+    .msg-avatar.security { background: linear-gradient(135deg, var(--red), #991b1b); }
+    .msg-bubble { max-width: 72%; padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.6; }
+    .msg.user .msg-bubble { background: rgba(167,139,250,0.15); border: 1px solid rgba(167,139,250,0.25); color: var(--text); margin-left: auto; }
+    .msg.agent .msg-bubble { background: rgba(34,211,238,0.08); border: 1px solid rgba(34,211,238,0.2); }
+    .msg.security .msg-bubble { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); }
+    .msg-meta { font-size: 10px; color: var(--text-dim); margin-top: 4px; }
+    .agent-label { font-size: 10px; font-weight: 600; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+
+    .chat-input-area {
+      padding: 16px 24px;
+      background: rgba(11,17,32,0.8);
+      border-top: 1px solid var(--border);
+      display: flex; gap: 12px; align-items: flex-end;
+    }
+    .chat-input {
+      flex: 1; background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 16px; color: var(--text);
+      font-size: 14px; font-family: inherit; resize: none; min-height: 48px; max-height: 120px;
+      transition: border-color 0.2s;
+    }
+    .chat-input:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(34,211,238,0.1); }
+    .send-btn {
+      padding: 12px 22px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, var(--cyan), #0891b2);
+      color: #0B1120; font-weight: 700; cursor: pointer; font-size: 14px; font-family: inherit;
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .send-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(34,211,238,0.3); }
+    .send-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* Typing indicator */
+    .typing { display: flex; gap: 4px; padding: 8px 4px; }
+    .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); animation: bounce 1.2s ease infinite; }
+    .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+    /* Schedule View */
+    .schedule-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+    .med-card { padding: 16px; border-radius: 12px; background: rgba(34,211,238,0.06); border: 1px solid rgba(34,211,238,0.2); transition: all 0.2s; }
+    .med-card:hover { border-color: var(--cyan); transform: translateY(-2px); }
+    .med-name { font-size: 15px; font-weight: 700; color: var(--cyan); margin-bottom: 4px; }
+    .med-dose { font-size: 13px; color: var(--text-dim); margin-bottom: 8px; }
+    .med-times { display: flex; flex-wrap: wrap; gap: 6px; }
+    .time-chip { background: rgba(167,139,250,0.15); border: 1px solid rgba(167,139,250,0.3); border-radius: 20px; padding: 3px 10px; font-size: 12px; color: var(--violet); font-weight: 600; }
+    .log-dose-btn { width: 100%; margin-top: 12px; padding: 8px; border-radius: 8px; background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); color: var(--green); cursor: pointer; font-size: 12px; font-weight: 600; font-family: inherit; transition: all 0.2s; }
+    .log-dose-btn:hover { background: rgba(34,197,94,0.25); }
+
+    .add-med-form { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; align-items: end; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label { font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+    .form-input { background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font-size: 13px; font-family: inherit; transition: border-color 0.2s; }
+    .form-input:focus { outline: none; border-color: var(--cyan); }
+    .add-btn { padding: 10px 20px; border-radius: 8px; border: none; background: linear-gradient(135deg, var(--cyan), #0891b2); color: #0B1120; font-weight: 700; cursor: pointer; font-size: 13px; font-family: inherit; transition: all 0.2s; }
+    .add-btn:hover { box-shadow: 0 0 16px rgba(34,211,238,0.3); }
+    .export-btn { padding: 10px 20px; border-radius: 8px; border: 1px solid rgba(167,139,250,0.4); background: rgba(167,139,250,0.1); color: var(--violet); font-weight: 600; cursor: pointer; font-size: 13px; font-family: inherit; transition: all 0.2s; }
+    .export-btn:hover { background: rgba(167,139,250,0.2); }
+
+    /* Safety Panel */
+    .safety-status { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 10px; margin-bottom: 16px; }
+    .safety-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .safety-dot.green { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse-green 2s ease-in-out infinite; }
+    .safety-dot.amber { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+    .safety-dot.red { background: var(--red); box-shadow: 0 0 8px var(--red); animation: pulse-red 1s ease-in-out infinite; }
+    @keyframes pulse-green { 0%,100%{box-shadow:0 0 8px rgba(34,197,94,0.5)} 50%{box-shadow:0 0 16px rgba(34,197,94,0.8)} }
+    .interaction-card { padding: 16px; border-radius: 10px; margin-bottom: 12px; border: 1px solid; }
+    .interaction-card.HIGH { border-color: var(--red); background: rgba(239,68,68,0.08); }
+    .interaction-card.MEDIUM { border-color: var(--amber); background: rgba(245,158,11,0.08); }
+    .interaction-card.LOW { border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.05); }
+    .severity-badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 8px; }
+    .severity-badge.HIGH { background: rgba(239,68,68,0.2); color: var(--red); border: 1px solid var(--red); }
+    .severity-badge.MEDIUM { background: rgba(245,158,11,0.2); color: var(--amber); border: 1px solid var(--amber); }
+    .severity-badge.LOW { background: rgba(34,197,94,0.2); color: var(--green); border: 1px solid var(--green); }
+    .approval-panel { border: 2px solid var(--amber); border-radius: 12px; padding: 20px; background: rgba(245,158,11,0.06); margin-top: 16px; }
+    .approval-title { font-size: 15px; font-weight: 700; color: var(--amber); margin-bottom: 10px; }
+    .approval-btns { display: flex; gap: 10px; margin-top: 14px; }
+    .approve-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--green); background: rgba(34,197,94,0.15); color: var(--green); font-weight: 700; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+    .approve-btn:hover { background: rgba(34,197,94,0.3); }
+    .reject-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--red); background: rgba(239,68,68,0.1); color: var(--red); font-weight: 700; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+    .reject-btn:hover { background: rgba(239,68,68,0.2); }
+
+    /* Report View */
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+    .stat-box { padding: 16px; border-radius: 10px; text-align: center; background: rgba(255,255,255,0.04); border: 1px solid var(--border); }
+    .stat-value { font-size: 28px; font-weight: 800; color: var(--cyan); line-height: 1; }
+    .stat-label { font-size: 11px; color: var(--text-dim); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .streak-bar { display: flex; gap: 4px; margin-top: 14px; flex-wrap: wrap; }
+    .streak-day { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; }
+    .streak-day.taken { background: rgba(34,211,238,0.25); color: var(--cyan); border: 1px solid rgba(34,211,238,0.3); }
+    .streak-day.missed { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+
+    /* Audit Log */
+    .audit-toggle {
+      position: fixed; bottom: 20px; right: 20px;
+      padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
+      background: rgba(11,17,32,0.9); color: var(--text-dim); cursor: pointer; font-family: inherit;
+      font-size: 12px; font-weight: 600; z-index: 200; backdrop-filter: blur(8px);
+      transition: all 0.2s;
+    }
+    .audit-toggle:hover { color: var(--text); border-color: var(--cyan); }
+    .audit-panel {
+      position: fixed; bottom: 60px; right: 20px; width: 420px; max-height: 300px;
+      overflow-y: auto; z-index: 199;
+      background: rgba(11,17,32,0.97); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px; backdrop-filter: blur(12px);
+      display: none;
+    }
+    .audit-panel.open { display: block; }
+    .audit-entry { padding: 6px 8px; border-radius: 6px; margin-bottom: 4px; font-size: 11px; font-family: monospace; line-height: 1.4; }
+    .audit-entry.INFO { color: var(--text-dim); }
+    .audit-entry.WARNING { color: var(--amber); background: rgba(245,158,11,0.05); }
+    .audit-entry.CRITICAL { color: var(--red); background: rgba(239,68,68,0.08); }
+
+    /* Toast */
+    .toast {
+      position: fixed; top: 80px; right: 20px; z-index: 300;
+      padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 600;
+      backdrop-filter: blur(12px); border: 1px solid;
+      animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+      max-width: 320px;
+    }
+    @keyframes toastIn { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes toastOut { from{opacity:1} to{opacity:0} }
+    .toast.success { background: rgba(34,197,94,0.15); border-color: var(--green); color: var(--green); }
+    .toast.error   { background: rgba(239,68,68,0.15); border-color: var(--red); color: var(--red); }
+    .toast.warning { background: rgba(245,158,11,0.15); border-color: var(--amber); color: var(--amber); }
+    .toast.critical { background: rgba(239,68,68,0.2); border-color: var(--red); color: var(--red); font-weight: 700; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(34,211,238,0.2); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(34,211,238,0.4); }
+
+    /* Helpers */
+    .empty-state { text-align: center; padding: 40px; color: var(--text-dim); }
+    .empty-icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-text { font-size: 14px; }
+    .spinner { width: 20px; height: 20px; border: 2px solid rgba(34,211,238,0.2); border-top-color: var(--cyan); border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+    .section-title { font-size: 20px; font-weight: 700; color: var(--text); }
+    .section-sub { font-size: 13px; color: var(--text-dim); }
+    hr { border: none; border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+<div class="app">
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <span class="logo-icon">💊</span>
+      <div>
+        <div class="logo-text">CuroCadence AI</div>
+        <div class="logo-sub">Safe. Smart. Always Watching Your Meds.</div>
+      </div>
+    </div>
+    <nav>
+      <button class="nav-btn active" id="nav-chat"     onclick="showView('chat')">💬 Chat</button>
+      <button class="nav-btn"        id="nav-schedule" onclick="showView('schedule')">📅 Schedule</button>
+      <button class="nav-btn"        id="nav-safety"   onclick="showView('safety')">🛡️ Safety</button>
+      <button class="nav-btn"        id="nav-report"   onclick="showView('report')">📊 Report</button>
+    </nav>
+    <button class="emergency-btn" onclick="triggerEmergency()">🚨 Emergency</button>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+
+    <!-- ── CHAT VIEW ── -->
+    <div class="view active" id="view-chat" style="display:grid;">
+      <div class="chat-messages" id="chat-messages">
+        <div class="msg agent">
+          <div class="msg-avatar agent">🤖</div>
+          <div>
+            <div class="agent-label">CuroCadence AI — Orchestrator</div>
+            <div class="msg-bubble">
+              Hello! I'm CuroCadence AI, your personal medication concierge. I can help you:<br><br>
+              • 💊 <strong>Add medications</strong> — "Add metformin 500mg twice daily"<br>
+              • 📋 <strong>View your schedule</strong> — "Show my medication schedule"<br>
+              • ✅ <strong>Log doses</strong> — "Log my morning warfarin dose"<br>
+              • ⚠️ <strong>Check interactions</strong> — "Is aspirin safe with warfarin?"<br>
+              • 📊 <strong>Get reports</strong> — "How's my adherence this week?"<br><br>
+              How can I help you today?
+            </div>
+            <div class="msg-meta">Just now</div>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <textarea
+          class="chat-input"
+          id="chat-input"
+          placeholder="Ask about your medications... (e.g. Add metformin 500mg twice daily after meals)"
+          rows="1"
+          id="chat-input"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()">Send ↑</button>
+      </div>
+    </div>
+
+    <!-- ── SCHEDULE VIEW ── -->
+    <div class="view" id="view-schedule">
+      <div class="row">
+        <div>
+          <div class="section-title">📅 Medication Schedule</div>
+          <div class="section-sub">Today's dosing timeline</div>
+        </div>
+        <button class="export-btn" onclick="exportCalendar()">📤 Export to Calendar (.ics)</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Add New Medication</div>
+        <div class="add-med-form">
+          <div class="form-group">
+            <label class="form-label">Drug Name</label>
+            <input class="form-input" id="med-name" placeholder="e.g. Metformin" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Dose</label>
+            <input class="form-input" id="med-dose" placeholder="e.g. 500mg" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Times (comma-separated)</label>
+            <input class="form-input" id="med-times" placeholder="e.g. 08:00,20:00" />
+          </div>
+          <button class="add-btn" onclick="addMedication()">Add Medication</button>
+        </div>
+      </div>
+
+      <div id="approval-container"></div>
+
+      <div class="card">
+        <div class="card-title">Current Medications</div>
+        <div class="schedule-grid" id="schedule-grid">
+          <div class="empty-state">
+            <div class="empty-icon">💊</div>
+            <div class="empty-text">No medications added yet. Add your first medication above.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SAFETY VIEW ── -->
+    <div class="view" id="view-safety">
+      <div class="section-title">🛡️ Interaction &amp; Safety Panel</div>
+      <div class="section-sub">Real-time drug interaction monitoring</div>
+
+      <div class="card" id="safety-status-card">
+        <div class="safety-status" style="background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); border-radius: 10px;">
+          <div class="safety-dot green" id="safety-dot"></div>
+          <div>
+            <div style="font-weight:600; font-size:14px;" id="safety-text">All Clear — No Interactions Detected</div>
+            <div style="font-size:12px; color:var(--text-dim);" id="safety-sub">Your current medications have no known conflicts.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Manual Interaction Check</div>
+        <div style="display:flex; gap:12px; align-items:end; flex-wrap:wrap;">
+          <div class="form-group" style="flex:1; min-width:140px;">
+            <label class="form-label">Drug A</label>
+            <input class="form-input" id="drug-a" placeholder="e.g. Warfarin" />
+          </div>
+          <div class="form-group" style="flex:1; min-width:140px;">
+            <label class="form-label">Drug B</label>
+            <input class="form-input" id="drug-b" placeholder="e.g. Aspirin" />
+          </div>
+          <button class="add-btn" onclick="checkInteraction()">Check Interaction</button>
+        </div>
+        <div id="interaction-result" style="margin-top:14px;"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Pending Approvals</div>
+        <div id="pending-list">
+          <div class="empty-state" style="padding:20px;">
+            <div class="empty-icon">✅</div>
+            <div class="empty-text">No pending approvals — all medications reviewed.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── REPORT VIEW ── -->
+    <div class="view" id="view-report">
+      <div class="section-title">📊 Weekly Adherence Report</div>
+      <div class="section-sub">Track your medication adherence over time</div>
+
+      <div class="empty-state" id="report-empty" style="display:none; margin-top:40px; text-align:center;">
+        <div class="empty-icon" style="font-size:32px; margin-bottom:10px;">📊</div>
+        <div class="empty-text">No data yet — add a medication to get started.</div>
+      </div>
+
+      <div class="stat-grid" id="stat-grid">
+        <div class="stat-box">
+          <div class="stat-value" id="stat-taken">—</div>
+          <div class="stat-label">Doses Taken</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="stat-scheduled">—</div>
+          <div class="stat-label">Doses Scheduled</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="stat-missed">—</div>
+          <div class="stat-label">Doses Missed</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="stat-pct">—</div>
+          <div class="stat-label">Adherence Rate</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="stat-streak">—</div>
+          <div class="stat-label">Day Streak 🔥</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">7-Day Streak Visualization</div>
+        <div class="streak-bar" id="streak-bar"></div>
+      </div>
+
+      <div class="card violet">
+        <div class="card-title">AI Recommendation</div>
+        <div id="report-recommendation" style="font-size:14px; line-height:1.7; color:var(--text);">
+          Click "Refresh Report" to generate your weekly adherence summary.
+        </div>
+        <button class="add-btn" style="margin-top:14px;" onclick="loadReport()">Refresh Report</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Audit Log Panel -->
+<button class="audit-toggle" onclick="toggleAudit()">🔒 Audit Log</button>
+<div class="audit-panel" id="audit-panel">
+  <div style="font-size:11px; font-weight:700; color:var(--cyan); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.08em;">Security Audit Trail</div>
+  <div id="audit-entries">Loading...</div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────────────────
+let sessionId = null;
+const userId = 'default_user';
+let pendingApproval = null;
+let auditOpen = false;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Navigation — core view switching
+// ─────────────────────────────────────────────────────────────────────────────
+function showView(view) {
+  // Hide all views with inline style (beats any CSS specificity)
+  document.querySelectorAll('.view').forEach(function(v) {
+    v.classList.remove('active');
+    v.style.display = 'none';
+  });
+  // Deactivate all nav buttons
+  document.querySelectorAll('.nav-btn').forEach(function(b) {
+    b.classList.remove('active');
+  });
+  // Show target view
+  var target = document.getElementById('view-' + view);
+  target.classList.add('active');
+  target.style.display = (view === 'chat') ? 'grid' : 'flex';
+  // Activate nav button
+  var navBtn = document.getElementById('nav-' + view);
+  if (navBtn) navBtn.classList.add('active');
+  // Load data for the view
+  if (view === 'schedule') loadSchedule();
+  if (view === 'safety')   loadSafety();
+  if (view === 'report')   loadReport();
+}
+
+// Wire up the textarea Enter key (cannot use inline onkeydown with quotes in placeholder)
+document.addEventListener('DOMContentLoaded', function() {
+  var chatInput = document.getElementById('chat-input');
+  if (chatInput) {
+    chatInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+    chatInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = this.scrollHeight + 'px';
+    });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Toast
+// ─────────────────────────────────────────────────────────────────────────────
+function showToast(msg, type, duration) {
+  type = type || 'success';
+  duration = duration || 3000;
+  var t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function() { if (t.parentNode) t.parentNode.removeChild(t); }, duration);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Chat
+// ─────────────────────────────────────────────────────────────────────────────
+function formatTime(ts) {
+  if (!ts) return 'Just now';
+  try { return new Date(ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
+  catch(e) { return 'Just now'; }
+}
+
+function appendMsg(content, role, agentName, ts) {
+  role = role || 'agent';
+  agentName = agentName || 'CuroCadence AI';
+  var container = document.getElementById('chat-messages');
+  var div = document.createElement('div');
+  div.className = 'msg ' + role;
+  var avatarIcon = role === 'user' ? '👤' : role === 'security' ? '🔒' : '🤖';
+  var agentColor = role === 'security' ? 'var(--red)' : 'var(--cyan)';
+  var agentLabelHtml = role !== 'user'
+    ? '<div class="agent-label" style="color:' + agentColor + '">' + agentName + '</div>'
+    : '';
+  var safeContent = content.replace(/\n/g, '<br>');
+  div.innerHTML =
+    '<div class="msg-avatar ' + role + '">' + avatarIcon + '</div>' +
+    '<div>' +
+      agentLabelHtml +
+      '<div class="msg-bubble">' + safeContent + '</div>' +
+      '<div class="msg-meta">' + formatTime(ts) + '</div>' +
+    '</div>';
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function showTyping() {
+  var container = document.getElementById('chat-messages');
+  var div = document.createElement('div');
+  div.className = 'msg agent';
+  div.id = 'typing-indicator';
+  div.innerHTML =
+    '<div class="msg-avatar agent">🤖</div>' +
+    '<div><div class="msg-bubble"><div class="typing"><span></span><span></span><span></span></div></div></div>';
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function removeTyping() {
+  var t = document.getElementById('typing-indicator');
+  if (t) t.parentNode.removeChild(t);
+}
+
+function sendMessage() {
+  var input = document.getElementById('chat-input');
+  var msg = input.value.trim();
+  if (!msg) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('send-btn').disabled = true;
+
+  appendMsg(msg, 'user', '', new Date().toISOString());
+  showTyping();
+
+  fetch('/chat', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({message: msg, user_id: userId, session_id: sessionId})
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    sessionId = data.session_id;
+    removeTyping();
+    if (data.security_blocked) {
+      appendMsg(data.response, 'security', '🔒 Security Checkpoint', data.timestamp);
+      showToast('🔒 Security alert: Input blocked', 'error');
+      loadAuditLog();
+    } else {
+      var rawName = data.agent_name || 'orchestrator';
+      var agentLabel = rawName.replace(/_/g, ' ').split(' ').map(function(w) {
+        return w.charAt(0).toUpperCase() + w.slice(1);
+      }).join(' ');
+      appendMsg(data.response, 'agent', agentLabel, data.timestamp);
+      loadSafety();
+      loadAuditLog();
+    }
+  })
+  .catch(function(e) {
+    removeTyping();
+    appendMsg('Connection error. Please check if the server is running.', 'security', 'System Error', '');
+  })
+  .finally(function() {
+    document.getElementById('send-btn').disabled = false;
+    var inp = document.getElementById('chat-input');
+    if (inp) inp.focus();
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Schedule
+// ─────────────────────────────────────────────────────────────────────────────
+function formatTime12h(timeStr) {
+  if (!timeStr) return timeStr;
+  var parts = timeStr.trim().split(':');
+  if (parts.length !== 2) return timeStr; // fallback if not HH:MM
+  var h = parseInt(parts[0], 10);
+  var m = parts[1];
+  if (isNaN(h)) return timeStr;
+  var ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  return h + ':' + m + ' ' + ampm;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+function loadSchedule() {
+  fetch('/schedule/' + userId)
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var grid = document.getElementById('schedule-grid');
+    var meds = data.schedule || [];
+    if (!meds.length) {
+      grid.innerHTML = '<div class="empty-state"><div class="empty-icon">💊</div><div class="empty-text">No medications added yet.</div></div>';
+      return;
+    }
+    grid.innerHTML = meds.map(function(m) {
+      var times = (m.times || []).map(function(t) {
+        return '<span class="time-chip">' + formatTime12h(t) + '</span>';
+      }).join('');
+      return '<div class="med-card">' +
+        '<div class="med-name">' + m.drug_name + '</div>' +
+        '<div class="med-dose">' + m.dose + '</div>' +
+        '<div class="med-times">' + times + '</div>' +
+        '<button class="log-dose-btn" onclick="logDose(\'' + m.drug_name + '\')">✅ Log Dose Taken</button>' +
+        '</div>';
+    }).join('');
+  })
+  .catch(function(e) { console.error('Schedule load error:', e); });
+}
+
+function addMedication() {
+  var name  = document.getElementById('med-name').value.trim();
+  var dose  = document.getElementById('med-dose').value.trim();
+  var times = document.getElementById('med-times').value.trim();
+  if (!name || !dose || !times) { showToast('Please fill in all fields', 'error'); return; }
+
+  fetch('/medication/add', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({user_id: userId, drug_name: name, dose: dose, times: times})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.status === 'pending_approval') {
+      pendingApproval = {drug_name: name, dose: dose, times: times, interactions: data.interactions, severity: data.severity, approval_id: data.approval_id};
+      showApprovalPanel(data);
+      updateSafetyStatus(data.severity);
+      showView('safety');
+      showToast('⚠️ ' + data.severity + ' interaction — approval required', 'warning');
+    } else {
+      document.getElementById('med-name').value = '';
+      document.getElementById('med-dose').value = '';
+      document.getElementById('med-times').value = '';
+      showToast('✅ ' + name + ' added to schedule!', 'success');
+      loadSchedule();
+      loadAuditLog();
+    }
+  })
+  .catch(function(e) { showToast('Error adding medication', 'error'); });
+}
+
+function showApprovalPanel(data) {
+  var sev = data.severity || 'MEDIUM';
+  var interactions = data.interactions || [];
+  var intHtml = interactions.map(function(i) {
+    return '<div class="interaction-card ' + i.severity + '">' +
+      '<span class="severity-badge ' + i.severity + '">' + i.severity + '</span>' +
+      '<div style="font-size:13px;font-weight:600;">' + i.drug1 + ' + ' + i.drug2 + '</div>' +
+      '<div style="font-size:12px;color:var(--text-dim);margin-top:4px;">' + (i.description || '') + '</div>' +
+      '</div>';
+  }).join('') || '<p style="font-size:13px;color:var(--text-dim);">Interaction detected with existing medications.</p>';
+
+  var panel = '<div class="approval-panel">' +
+    '<div class="approval-title">' + (sev === 'HIGH' ? '⛔' : '⚠️') + ' ' + sev + ' SEVERITY — Human Approval Required</div>' +
+    intHtml +
+    '<div class="approval-btns">' +
+      '<button class="approve-btn" onclick="submitApproval(true)">✅ Approve &amp; Add</button>' +
+      '<button class="reject-btn"  onclick="submitApproval(false)">❌ Cancel</button>' +
+    '</div>' +
+    '</div>';
+
+  var container = document.getElementById('approval-container');
+  if (container) container.innerHTML = panel;
+  var pending = document.getElementById('pending-list');
+  if (pending) pending.innerHTML = panel;
+}
+
+function submitApproval(approved) {
+  if (!pendingApproval) return;
+  fetch('/medication/approve', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      approved: approved,
+      user_id: userId,
+      drug_name: pendingApproval.drug_name,
+      dose: pendingApproval.dose,
+      times: pendingApproval.times
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    pendingApproval = null;
+    var msg = data.message || (approved ? 'Medication approved and added.' : 'Medication addition cancelled.');
+    var icon = approved ? '✅' : '❌';
+    var emptyHtml = '<div class="empty-state" style="padding:20px;"><div class="empty-icon">' + icon + '</div><div class="empty-text">' + msg + '</div></div>';
+    var pc = document.getElementById('approval-container'); if (pc) pc.innerHTML = '';
+    var pl = document.getElementById('pending-list'); if (pl) pl.innerHTML = emptyHtml;
+    showToast(approved ? '✅ Medication approved and added!' : '❌ Medication addition cancelled', approved ? 'success' : 'warning');
+    updateSafetyStatus('LOW');
+    loadAuditLog();
+    if (approved) loadSchedule();
+  })
+  .catch(function(e) { showToast('Error submitting approval', 'error'); });
+}
+
+function logDose(drugName) {
+  fetch('/dose/log', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({user_id: userId, drug_name: drugName})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    showToast('✅ ' + drugName + ' dose logged!', 'success');
+    loadAuditLog();
+  })
+  .catch(function(e) { showToast('Error logging dose', 'error'); });
+}
+
+function exportCalendar() {
+  fetch('/schedule/' + userId + '/export-ics')
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var blob = new Blob([data.ics_content], {type: 'text/calendar'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'medication_schedule.ics';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('📅 Calendar exported!', 'success');
+  })
+  .catch(function(e) { showToast('Error exporting calendar', 'error'); });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Safety
+// ─────────────────────────────────────────────────────────────────────────────
+function loadSafety() {
+  fetch('/pending-approvals/' + userId)
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.count === 0 && !pendingApproval) {
+      var pl = document.getElementById('pending-list');
+      if (pl) pl.innerHTML = '<div class="empty-state" style="padding:20px;"><div class="empty-icon">✅</div><div class="empty-text">No pending approvals.</div></div>';
+      updateSafetyStatus('LOW');
+    } else if (data.count > 0) {
+      pendingApproval = data.pending[0];
+      showApprovalPanel(pendingApproval);
+      updateSafetyStatus(pendingApproval.severity);
+    }
+  })
+  .catch(function(e) {});
+}
+
+function updateSafetyStatus(severity) {
+  var dot  = document.getElementById('safety-dot');
+  var text = document.getElementById('safety-text');
+  var sub  = document.getElementById('safety-sub');
+  if (!dot) return;
+  dot.className = 'safety-dot ' + (severity === 'HIGH' ? 'red' : severity === 'MEDIUM' ? 'amber' : 'green');
+  text.textContent = severity === 'HIGH'   ? '⛔ HIGH Risk — Dangerous Interaction Detected!'
+                   : severity === 'MEDIUM' ? '⚠️ MEDIUM Risk — Caregiver Notified'
+                   : '✅ All Clear — No Interactions Detected';
+  sub.textContent  = severity === 'LOW'    ? 'Your current medications have no known conflicts.'
+                   : 'Human approval required before proceeding.';
+}
+
+function checkInteraction() {
+  var a = document.getElementById('drug-a').value.trim();
+  var b = document.getElementById('drug-b').value.trim();
+  if (!a || !b) { showToast('Enter both drug names', 'error'); return; }
+
+  fetch('/chat', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({message: 'Check interaction between ' + a + ' and ' + b, user_id: userId})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var resultDiv = document.getElementById('interaction-result');
+    resultDiv.innerHTML = '<div class="interaction-card LOW">' +
+      '<span class="severity-badge LOW">RESULT</span>' +
+      '<div style="font-size:13px;">' + data.response + '</div>' +
+      '</div>';
+  })
+  .catch(function(e) { showToast('Error checking interaction', 'error'); });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Report
+// ─────────────────────────────────────────────────────────────────────────────
+function loadReport() {
+  fetch('/report/' + userId, { cache: 'no-store' })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+
+    document.getElementById('stat-taken').textContent     = data.doses_taken     != null ? data.doses_taken     : '0';
+    document.getElementById('stat-scheduled').textContent = data.doses_scheduled != null ? data.doses_scheduled : '0';
+    document.getElementById('stat-missed').textContent    = data.doses_missed    != null ? data.doses_missed    : '0';
+    document.getElementById('stat-pct').textContent       = (data.adherence_pct  != null ? data.adherence_pct  : 0) + '%';
+    document.getElementById('stat-streak').textContent    = data.streak_days     != null ? data.streak_days     : '0';
+
+    // Streak bar
+    var streak = data.streak_days || 0;
+    var bar = document.getElementById('streak-bar');
+    bar.innerHTML = Array.from({length: 7}, function(_, i) {
+      var taken = i < streak;
+      return '<div class="streak-day ' + (taken ? 'taken' : 'missed') + '" title="Day ' + (i+1) + '">' + (taken ? '✅' : '⬜') + '</div>';
+    }).join('');
+
+    // Recommendation — NOTE: use double-quotes inside strings to avoid apostrophe SyntaxError
+    var pct = data.adherence_pct || 0;
+    var rec = '';
+    if (data.doses_scheduled === 0) {
+      rec = "No medications added yet — add one in Chat or Schedule to start tracking your adherence.";
+    } else if (pct >= 90) {
+      rec = "🌟 Excellent adherence! Keep it up — consistency is key to medication effectiveness.";
+    } else if (pct >= 70) {
+      rec = "👍 Good adherence. Try setting phone reminders for missed doses. You're almost at the target!";
+    } else if (pct >= 50) {
+      rec = "⚠️ Moderate adherence. Consider using the calendar export feature and setting alarms.";
+    } else {
+      rec = "❗ Low adherence detected. Please speak with your caregiver or pharmacist.";
+    }
+    if (data.medications && data.medications.length) {
+      rec += "<br><br>💊 <strong>Current medications:</strong> " + data.medications.join(', ');
+    }
+    document.getElementById('report-recommendation').innerHTML = rec;
+  })
+  .catch(function(e) { console.error('Report error:', e); });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Emergency
+// ─────────────────────────────────────────────────────────────────────────────
+function triggerEmergency() {
+  if (!confirm('🚨 EMERGENCY ESCALATION\n\nThis will immediately alert your caregiver. Are you sure?')) return;
+  fetch('/emergency', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({user_id: userId, message: 'User triggered emergency escalation from UI'})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    showToast('🚨 EMERGENCY ESCALATION sent to caregiver!', 'critical', 5000);
+    loadAuditLog();
+    appendMsg('🚨 EMERGENCY ESCALATION triggered. Your caregiver has been notified immediately. This event is logged as CRITICAL in the audit trail.', 'security', '🚨 Emergency Escalation', new Date().toISOString());
+    showView('chat');
+  })
+  .catch(function(e) { showToast('Error triggering emergency', 'error'); });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Audit Log
+// ─────────────────────────────────────────────────────────────────────────────
+function toggleAudit() {
+  auditOpen = !auditOpen;
+  var panel = document.getElementById('audit-panel');
+  if (auditOpen) { panel.classList.add('open'); loadAuditLog(); }
+  else           { panel.classList.remove('open'); }
+}
+
+function loadAuditLog() {
+  fetch('/audit-log')
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var entries = (data.entries || []).slice().reverse();
+    var div = document.getElementById('audit-entries');
+    if (!entries.length) {
+      div.innerHTML = '<div style="color:var(--text-dim);font-size:11px;">No entries yet.</div>';
+      return;
+    }
+    div.innerHTML = entries.map(function(e) {
+      return '<div class="audit-entry ' + e.level + '">' +
+        '<span style="opacity:0.6">' + new Date(e.timestamp).toLocaleTimeString() + '</span>' +
+        '<span style="margin-left:6px;font-weight:700">[' + e.level + ']</span>' +
+        '<span style="margin-left:4px">' + e.event + '</span>' +
+        '</div>';
+    }).join('');
+  })
+  .catch(function(e) {});
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────────────────────────────────────
+setInterval(function() { if (auditOpen) loadAuditLog(); }, 5000);
+</script>
+</body>
+</html>

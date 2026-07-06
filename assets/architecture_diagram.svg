@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#0B1120" />
+  
+  <defs>
+    <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <filter id="glow-amber" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <filter id="glow-violet" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="800" y="80" font-family="'Inter', sans-serif" font-size="48" font-weight="700" fill="#FFFFFF" text-anchor="middle">
+    CuroCadence AI — Agent Workflow
+  </text>
+
+  <!-- Input -->
+  <text x="150" y="240" font-family="'Inter', sans-serif" font-size="24" fill="#e2e8f0" text-anchor="middle">User Input</text>
+  <path d="M 150 260 L 150 420" stroke="#94a3b8" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+
+  <!-- Security Checkpoint -->
+  <rect x="20" y="440" width="260" height="100" rx="15" fill="#131d32" stroke="#F59E0B" stroke-width="3" filter="url(#glow-amber)"/>
+  <text x="150" y="490" font-family="'Inter', sans-serif" font-size="20" font-weight="700" fill="#F59E0B" text-anchor="middle">Security Checkpoint</text>
+  <text x="150" y="520" font-family="'Inter', sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">PII Scrubbing &amp; Injection Detection</text>
+  
+  <path d="M 290 490 L 370 490" stroke="#94a3b8" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+
+  <!-- Orchestrator -->
+  <rect x="390" y="420" width="220" height="140" rx="15" fill="#131d32" stroke="#22D3EE" stroke-width="3" filter="url(#glow-cyan)"/>
+  <text x="500" y="480" font-family="'Inter', sans-serif" font-size="22" font-weight="700" fill="#22D3EE" text-anchor="middle">Orchestrator Agent</text>
+  <text x="500" y="510" font-family="'Inter', sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">Routes requests to specialists</text>
+
+  <!-- Scheduler -->
+  <rect x="750" y="220" width="220" height="120" rx="15" fill="#131d32" stroke="#22D3EE" stroke-width="3" filter="url(#glow-cyan)"/>
+  <text x="860" y="275" font-family="'Inter', sans-serif" font-size="20" font-weight="700" fill="#22D3EE" text-anchor="middle">Scheduler Agent</text>
+  <text x="860" y="305" font-family="'Inter', sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">Manages Medication List</text>
+  <path d="M 610 450 Q 680 280 730 280" stroke="#94a3b8" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+
+  <!-- Interaction & Safety -->
+  <rect x="750" y="430" width="220" height="120" rx="15" fill="#131d32" stroke="#22D3EE" stroke-width="3" filter="url(#glow-cyan)"/>
+  <text x="860" y="485" font-family="'Inter', sans-serif" font-size="20" font-weight="700" fill="#22D3EE" text-anchor="middle">Interaction &amp; Safety</text>
+  <text x="860" y="515" font-family="'Inter', sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">Checks drug conflicts</text>
+  <path d="M 630 490 L 730 490" stroke="#94a3b8" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+
+  <!-- Reporting -->
+  <rect x="750" y="640" width="220" height="120" rx="15" fill="#131d32" stroke="#22D3EE" stroke-width="3" filter="url(#glow-cyan)"/>
+  <text x="860" y="695" font-family="'Inter', sans-serif" font-size="20" font-weight="700" fill="#22D3EE" text-anchor="middle">Reporting Agent</text>
+  <text x="860" y="725" font-family="'Inter', sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">Tracks weekly adherence</text>
+  <path d="M 610 530 Q 680 700 730 700" stroke="#94a3b8" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+
+  <!-- Human Node -->
+  <rect x="1100" y="445" width="160" height="90" rx="15" fill="#131d32" stroke="#A78BFA" stroke-width="3" filter="url(#glow-violet)"/>
+  <text x="1180" y="490" font-family="'Inter', sans-serif" font-size="20" font-weight="700" fill="#A78BFA" text-anchor="middle">Human ✋</text>
+  <text x="1180" y="515" font-family="'Inter', sans-serif" font-size="12" fill="#94a3b8" text-anchor="middle">RequestInput Pause</text>
+  <path d="M 980 490 L 1080 490" stroke="#94a3b8" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+  
+  <text x="1030" y="480" font-family="'Inter', sans-serif" font-size="12" fill="#EF4444" text-anchor="middle">HIGH/MEDIUM</text>
+
+  <!-- Caregiver Liaison -->
+  <rect x="1330" y="445" width="220" height="90" rx="15" fill="#131d32" stroke="#22D3EE" stroke-width="3" filter="url(#glow-cyan)"/>
+  <text x="1440" y="490" font-family="'Inter', sans-serif" font-size="20" font-weight="700" fill="#22D3EE" text-anchor="middle">Caregiver Liaison</text>
+  <text x="1440" y="515" font-family="'Inter', sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">Alerts Caregivers</text>
+  <path d="M 1270 490 L 1310 490" stroke="#94a3b8" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+
+  <!-- MCP Server -->
+  <rect x="1330" y="160" width="250" height="230" rx="15" fill="#0f1a2e" stroke="#e2e8f0" stroke-width="2" stroke-dasharray="8 4" />
+  <text x="1455" y="200" font-family="'Inter', sans-serif" font-size="20" font-weight="700" fill="#e2e8f0" text-anchor="middle">MCP Server</text>
+  <text x="1350" y="240" font-family="'Inter', sans-serif" font-size="14" fill="#94a3b8">
+    <tspan x="1360" dy="0">• get_medication_schedule</tspan>
+    <tspan x="1360" dy="25">• add_medication</tspan>
+    <tspan x="1360" dy="25">• check_interaction</tspan>
+    <tspan x="1360" dy="25">• log_dose_taken</tspan>
+    <tspan x="1360" dy="25">• export_schedule_ics</tspan>
+    <tspan x="1360" dy="25">• emergency_escalation</tspan>
+  </text>
+  
+  <path d="M 990 280 L 1310 280" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4" fill="none" marker-end="url(#arrow)" />
+</svg>
