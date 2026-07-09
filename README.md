@@ -9,11 +9,16 @@
 </p>
 
 <p align="center">
+  <a href="https://curocadence-ai.onrender.com"><b>🌐 Live Demo</b></a> ·
   <a href="https://youtu.be/UfVK875Ix4o">▶ Watch the 5-minute demo</a> ·
   <a href="#architecture">Architecture</a> ·
-  <a href="#quick-start">Quick Start</a> ·
+  <a href="#quick-start-run-locally">Quick Start</a> ·
   <a href="#sample-test-cases">Test Cases</a>
 </p>
+
+> ⏱️ **Note on the live demo:** it's hosted on a free tier that sleeps after 15 minutes of inactivity. The first request after a period of no traffic can take **30–60 seconds** to wake back up — this is expected, not a bug. Once awake, it responds normally.
+>
+> ⚠️ **Note on API limits:** this demo runs on a free-tier Gemini API key with a limited number of requests per day. If you see a quota or rate-limit error, it just means that daily limit was reached — it isn't a bug in the app. Try again later, or run it locally with your own free API key (see Quick Start below).
 
 ---
 
@@ -28,6 +33,7 @@ It was built for Google and Kaggle's **5-Day AI Agents Intensive: Vibe Coding Ca
 | **Track** | Concierge Agents |
 | **Framework** | Google Agent Development Kit (ADK 2.x) |
 | **Model** | Gemini 2.5 Flash |
+| **Live Demo** | [curocadence-ai.onrender.com](https://curocadence-ai.onrender.com) |
 | **Interfaces** | ADK Playground + Custom Web UI |
 
 ---
@@ -61,17 +67,17 @@ CuroCadence AI runs as a **five-node multi-agent system**:
                      ┌─────────▼──────────┐
                      │ 🤖 Orchestrator    │  ← Routes by intent
                      │    (root_agent)    │
-                     └──┬──┬──┬──┬───────┘
+                     └──┬──┬──┬──┬────────┘
         ┌───────────────┘  │  │  └──────────────────┐
         ▼                  ▼  ▼                      ▼
-┌──────────────┐  ┌──────────────┐  ┌──────────┐  ┌──────────────────┐
-│ 📅 Scheduler │  │ ⚠️ Safety    │  │🤝 Caregiver│  │ 📊 Reporting    │
-│    Agent     │  │    Agent     │  │   Liaison │  │    Agent        │
-│              │  │              │  │   Agent   │  │                 │
-│ • add_med    │  │ • check_int  │  │ • alert   │  │ • adherence_rpt │
-│ • get_sched  │  │ • get_sched  │  │ • emergency│  │ • get_schedule  │
-│ • log_dose   │  │              │  │           │  │                 │
-│ • export_ics │  │  MEDIUM/HIGH │  │           │  │                 │
+┌──────────────┐  ┌──────────────┐  ┌──────────┐   ┌──────────────────┐
+│ 📅 Scheduler │  │ ⚠️ Safety   |  |🤝Caregiver│  │ 📊 Reporting    │
+│    Agent     │  │    Agent     │  │   Liaison │  │    Agent         │
+│              │  │              │  │   Agent   │  │                  │
+│ • add_med    │  │ • check_int  │  │ • alert   │  │ • adherence_rpt  │
+│ • get_sched  │  │ • get_sched  │  │ • emergency│ │ • get_schedule   │
+│ • log_dose   │  │              │  │           │  │                  │
+│ • export_ics │  │  MEDIUM/HIGH │  │           │  │                  │
 └──────┬───────┘  └──────┬───────┘  └────┬──────┘  └──────────────────┘
        │                 │               │
        │         ┌───────▼───────┐       │
@@ -109,7 +115,17 @@ CuroCadence AI runs as a **five-node multi-agent system**:
 
 ---
 
-## Quick Start
+## Live Demo
+
+🌐 **Try it now: [curocadence-ai.onrender.com](https://curocadence-ai.onrender.com)**
+
+Hosted on Render's free tier. If it's been idle, the first load may take up to a minute to spin back up — subsequent requests are fast.
+
+Try the test cases below directly on the live app, or run it locally using Quick Start.
+
+---
+
+## Quick Start (Run Locally)
 
 ```bash
 # 1. Clone the repo
@@ -184,6 +200,7 @@ CuroCadence-AI/
 │   └── cover_page_banner.png
 ├── tests/                    # unit, integration, eval
 ├── deployment/terraform/     # optional cloud deployment (not required for judging)
+├── Dockerfile                 # Container definition, used for Render deployment
 ├── .env.example
 ├── .gitignore
 ├── Makefile
@@ -195,6 +212,18 @@ CuroCadence-AI/
 
 ---
 
+## Deployment
+
+CuroCadence AI is deployed on **[Render](https://render.com)** using the included `Dockerfile`:
+- Runtime: Docker
+- Instance: Free tier (512MB RAM, 0.1 CPU)
+- Environment variables (`GOOGLE_API_KEY`, `GOOGLE_GENAI_USE_VERTEXAI`, `GEMINI_MODEL`) are configured directly in Render's dashboard, never committed to the repo
+- Auto-deploys on every push to `main`
+
+To deploy your own copy: fork this repo, create a new Web Service on Render pointing at your fork, set the same three environment variables, and deploy.
+
+---
+
 ## Troubleshooting
 
 | Problem | Fix |
@@ -202,13 +231,15 @@ CuroCadence-AI/
 | `ModuleNotFoundError: No module named 'google.adk'` | Run `uv sync` (or `pip install google-adk>=2.0.0`) |
 | `404` / model errors on first query | Check `.env` has a valid `GOOGLE_API_KEY` and `GEMINI_MODEL=gemini-2.5-flash` (never `gemini-1.5-*`, those are retired) |
 | `adk` command not found (Windows) | Add uv tools to PATH: `$env:PATH = "C:\Users\<you>\.local\bin;" + $env:PATH` |
-| Port already in use | `netstat -ano \| findstr :18081` then `taskkill /PID <pid> /F` |
+| Port already in use (local) | `netstat -ano \| findstr :18081` then `taskkill /PID <pid> /F` |
+| Live demo slow to load | Free-tier hosting sleeps after 15 min idle; first request takes ~30–60s to wake up |
+| Live demo shows a `429` / quota / rate-limit error | The shared free-tier Gemini API key hit its daily request limit — not an app bug. Try again later, or run locally with your own key |
 
 ---
 
 ## Built With
 
-Google Agent Development Kit (ADK 2.x) · Model Context Protocol (MCP) · Gemini 2.5 Flash · FastAPI · Antigravity IDE
+Google Agent Development Kit (ADK 2.x) · Model Context Protocol (MCP) · Gemini 2.5 Flash · FastAPI · Docker · Render · Antigravity IDE
 
 ---
 
